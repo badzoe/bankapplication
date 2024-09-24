@@ -1,6 +1,7 @@
 package com.bankapp.bankapplication.service.impl;
 
 import com.bankapp.bankapplication.dto.*;
+import com.bankapp.bankapplication.dto.integration.InvestmentTransactionsDTO;
 
 public interface UserService {
 
@@ -11,5 +12,6 @@ public interface UserService {
     BankResponce debitAccount(creditDebitRequest request);
     BankResponce transfer(TransferRequest request);
     BankResponce login(LoginDto loginDto);
+    BankResponce processInvestmentTransaction(String token, InvestmentTransactionsDTO investmentTransactionsDTO);
 
 }

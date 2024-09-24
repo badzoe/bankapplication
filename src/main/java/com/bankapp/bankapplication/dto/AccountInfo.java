@@ -17,12 +17,20 @@ public class AccountInfo {
             name = "User Account Name"
     )
     private String accountName;
+
     @Schema(
             name = "User Account Balance"
     )
     private BigDecimal accountBalance;
+
     @Schema(
             name = "User Account Number"
     )
     private String accountNumber;
+
+    @Schema(
+            name = "Transaction History",
+            description = "Details of the recent transaction"
+    )
+    private String transactionHistory; // Added this field to hold the transaction history
 }

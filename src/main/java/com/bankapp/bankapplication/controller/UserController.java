@@ -1,6 +1,7 @@
 package com.bankapp.bankapplication.controller;
 
 import com.bankapp.bankapplication.dto.*;
+import com.bankapp.bankapplication.dto.integration.InvestmentTransactionsDTO;
 import com.bankapp.bankapplication.service.impl.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,7 +30,7 @@ public class UserController {
         return userService.createAccount(userRequest);
     }
 
-    @PostMapping
+    @PostMapping("/login")
     public BankResponce login(@RequestBody LoginDto loginDto){
         return userService.login(loginDto);
     }
@@ -65,5 +66,11 @@ public class UserController {
     @PostMapping("transfer")
     public BankResponce transfer(@RequestBody TransferRequest request){
         return userService.transfer(request);
+    }
+
+    @PostMapping("/investments")
+    public BankResponce investments(@RequestBody InvestmentTransactionsDTO request, @RequestHeader("Authorization") String authorization){
+
+        return userService.processInvestmentTransaction(authorization.replace("Bearer ",""),request);
     }
 }
