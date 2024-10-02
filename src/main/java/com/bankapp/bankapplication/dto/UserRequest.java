@@ -18,4 +18,6 @@ public class UserRequest {
     private String password;
     private String phoneNumber;
     private String alternativeNumber;
+    private String dateOfBirth;
+    private Boolean enableInvestmentsLogin;
 }

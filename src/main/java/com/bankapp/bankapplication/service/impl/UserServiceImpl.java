@@ -3,6 +3,7 @@ package com.bankapp.bankapplication.service.impl;
 import com.bankapp.bankapplication.config.JwtTokenProvider;
 import com.bankapp.bankapplication.dto.*;
 import com.bankapp.bankapplication.dto.integration.InvestmentTransactionsDTO;
+import com.bankapp.bankapplication.dto.integration.InvestorCreation;
 import com.bankapp.bankapplication.entity.Role;
 import com.bankapp.bankapplication.entity.User;
 import com.bankapp.bankapplication.entity.Tokens;
@@ -48,7 +49,7 @@ public class UserServiceImpl implements UserService {
 
     private final IntegrationServicesImpl integrationServices;
     private final TokensRepository tokensRepository;
-
+    private static final String ACCOUNTS_CREATION_MESSAGE = "ACCOUNT SUCCESSFULLY CREATED";
     @Override
     public BankResponce createAccount(UserRequest userRequest) {
         if (userRepository.existsByEmail(userRequest.getEmail())) {
@@ -73,27 +74,75 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(userRequest.getPhoneNumber())
                 .alternativeNumber(userRequest.getAlternativeNumber())
                 .status("ACTIVE")
-                .role(Role.valueOf("ACCOUNT_ADMIN"))
+                .role(Role.valueOf("ROLE_ADMIN"))
                 .build();
 
         User savedUser = userRepository.save(newUser);
 
+        if(userRequest.getEnableInvestmentsLogin()){
+            ResponseEntity<String> response= integrationServices.registerForInvestments(new InvestorCreation(userRequest.getFirstName(), userRequest.getLastName(),null, userRequest.getAddress(), userRequest.getPhoneNumber(), userRequest.getEmail(), userRequest.getPassword()));
+            if (response.getStatusCode().is2xxSuccessful()){
+                //PLEASE IMPLEMENT THIS ASCYNCHRONOUSLY, USE A QUEUE
+                // send email alerts
+                EmailDetails emailDetails = EmailDetails.builder()
+
+                        .recipient(savedUser.getEmail())
+                        .subject(ACCOUNTS_CREATION_MESSAGE)
+                        .messageBody("Congratulations! Your Account has been successfully created.\n Your Account Details: \n" + "Account Name:" + savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName() + "\nAccount Number:" + savedUser.getAccountNumber())
+                        .build();
+                //emailService.sendEmailAlert(emailDetails);
+                return BankResponce.builder()
+                        .responceCode(AccountUtils.ACCOUNT_CREATION_SUCCESS)
+                        .responceMessage(AccountUtils.ACCOUNT_CREATION_MESSAGE)
+                        .accountInfo(AccountInfo.builder()
+                                .accountBalance(savedUser.getAccountBalance())
+                                .accountNumber(savedUser.getAccountNumber())
+                                .accountName(savedUser.getFirstName() + " " + savedUser.getFirstName() + " " + savedUser.getOtherName())
+                                .build())
+                        .build();
+
+            }else {
+                //PLEASE IMPLEMENT THIS ASYNCHRONOUSLY, USE A QUEUE
+                // send email alerts
+                EmailDetails emailDetails = EmailDetails.builder()
+
+                        .recipient(savedUser.getEmail())
+                        .subject(ACCOUNTS_CREATION_MESSAGE)
+                        .messageBody("Congratulations! Your Bank Account has been successfully created but could not activate your investments account.\n Your Account Details: \n" + "Account Name:" + savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName() + "\nAccount Number:" + savedUser.getAccountNumber())
+                        .build();
+                //emailService.sendEmailAlert(emailDetails);
+                return BankResponce.builder()
+                        .responceCode(AccountUtils.ACCOUNT_CREATION_SUCCESS)
+                        .responceMessage(AccountUtils.ACCOUNT_CREATION_MESSAGE)
+                        .accountInfo(AccountInfo.builder()
+                                .accountBalance(savedUser.getAccountBalance())
+                                .accountNumber(savedUser.getAccountNumber())
+                                .accountName(savedUser.getFirstName() + " " + savedUser.getFirstName() + " " + savedUser.getOtherName())
+                                .build())
+                        .build();
+
+            }
+
+
+        }
+
         EmailDetails emailDetails = EmailDetails.builder()
 
                 .recipient(savedUser.getEmail())
-                .subject("ACCOUNT CREATION")
+                .subject(ACCOUNTS_CREATION_MESSAGE)
                 .messageBody("Congratulations! Your Account has been successfully created.\n Your Account Details: \n" + "Account Name:" + savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName() + "\nAccount Number:" + savedUser.getAccountNumber())
                 .build();
-        emailService.sendEmailAlert(emailDetails);
+        //emailService.sendEmailAlert(emailDetails);
         return BankResponce.builder()
                 .responceCode(AccountUtils.ACCOUNT_CREATION_SUCCESS)
                 .responceMessage(AccountUtils.ACCOUNT_CREATION_MESSAGE)
                 .accountInfo(AccountInfo.builder()
                         .accountBalance(savedUser.getAccountBalance())
                         .accountNumber(savedUser.getAccountNumber())
-                        .accountName(savedUser.getFirstName() + " " + savedUser.getFirstName() + " " + savedUser.getOtherName())
+                        .accountName(savedUser.getFirstName() + " " + savedUser.getLastName() + " " + savedUser.getOtherName())
                         .build())
                 .build();
+
 
     }
 

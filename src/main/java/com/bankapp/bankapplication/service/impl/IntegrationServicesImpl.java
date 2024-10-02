@@ -4,6 +4,7 @@ import com.bankapp.bankapplication.config.JwtTokenProvider;
 import com.bankapp.bankapplication.dto.integration.InvestProductRequest;
 import com.bankapp.bankapplication.dto.integration.InvestmentLoginDTO;
 import com.bankapp.bankapplication.dto.integration.InvestmentTransactionsDTO;
+import com.bankapp.bankapplication.dto.integration.InvestorCreation;
 import com.bankapp.bankapplication.entity.User;
 import com.bankapp.bankapplication.entity.Tokens;
 import com.bankapp.bankapplication.repository.TokensRepository;
@@ -14,7 +15,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Optional;
 
 @AllArgsConstructor
 @Service
@@ -33,6 +36,11 @@ public class IntegrationServicesImpl implements IntegrationServices {
     private final RestTemplate restTemplate;
 
     @Override
+    public ResponseEntity<String> registerForInvestments(InvestorCreation investorCreation) {
+        return investmentFeignClient.addNewUser(investorCreation);
+    }
+
+    @Override
     public String loginToInvestmentService(String username, String password) {
         log.info(username);
         log.info(password);
@@ -46,7 +54,7 @@ public class IntegrationServicesImpl implements IntegrationServices {
 
 
         }else {
-            return "Failed to connect to Investment Micro Service ";
+            return "Failed to connect to Investment Microservice ";
 
         }
     }
@@ -55,8 +63,17 @@ public class IntegrationServicesImpl implements IntegrationServices {
      * @param investmentTransactionsDTO
      * @return
      */
+
     @Override
     public ResponseEntity<String> transactOnInvestments(InvestmentTransactionsDTO investmentTransactionsDTO,String token) {
+
+        Optional<User> account =  userRepository.findById(jwtTokenProvider.getUserIdFromToken(token));
+        if(account.isPresent()){
+            User accountDetails = account.get();
+            if(accountDetails.getAccountBalance().compareTo(BigDecimal.valueOf(0)) <= 1 && investmentTransactionsDTO.transactionType() == 'D')
+            {
+                return ResponseEntity.badRequest().body("Cannot withdraw from account: ".concat(accountDetails.getAccountNumber()).concat(" with balance of ").concat(String.valueOf(accountDetails.getAccountBalance())));
+            }
         switch (investmentTransactionsDTO.transactionType()){
             case 'W'->
             {
@@ -81,7 +98,12 @@ public class IntegrationServicesImpl implements IntegrationServices {
                 );
 
                 if (response.getStatusCode().is2xxSuccessful()) {
-                    // ADD LOGIC TO DEDUCT THE BALANCE AND ALSO DONT FORGET TO CHECK IF THE TRANSACTION HE WANTS TO PERFORM HE OR SHE  HAS THE BALANCE
+                    // ADD LOGIC TO DEDUCT THE BALANCE AND ALSO DON'T FORGET TO CHECK IF THE TRANSACTION HE WANTS TO PERFORM HE OR SHE  HAS THE BALANCE
+
+                    accountDetails.setAccountBalance(accountDetails.getAccountBalance().add(investmentTransactionsDTO.balance()));
+                    userRepository.save(accountDetails);
+
+
                     return ResponseEntity.ok().body(response.getBody().toString());
                 } else {
                     return ResponseEntity.status(response.getStatusCode()).body(response.getBody());
@@ -96,6 +118,9 @@ public class IntegrationServicesImpl implements IntegrationServices {
 
                     // ADD LOGIC TO DEDUCT THE BALANCE AND ALSO DONT FORGET TO CHECK IF THE TRANSACTION HE WANTS TO PERFORM HE OR SHE  HAS THE BALANCE
 
+                    accountDetails.setAccountBalance(accountDetails.getAccountBalance().subtract(investmentTransactionsDTO.balance()));
+                    userRepository.save(accountDetails);
+
                     // Deduct from the relavant account
                     return  ResponseEntity.ok("Investment of "+ investmentTransactionsDTO.balance() + "  was successful");
 
@@ -108,6 +133,10 @@ public class IntegrationServicesImpl implements IntegrationServices {
                 log.info("transaction type not recognised");
                 return ResponseEntity.badRequest().body("Transaction not recognised within the system");
             }
+        }
+
+        }else {
+            return ResponseEntity.badRequest().body("The user is not in the system");
         }
     }
 
