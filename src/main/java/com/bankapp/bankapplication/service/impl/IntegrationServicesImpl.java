@@ -70,7 +70,7 @@ public class IntegrationServicesImpl implements IntegrationServices {
         Optional<User> account =  userRepository.findById(jwtTokenProvider.getUserIdFromToken(token));
         if(account.isPresent()){
             User accountDetails = account.get();
-            if(accountDetails.getAccountBalance().compareTo(BigDecimal.valueOf(0)) <= 1 && investmentTransactionsDTO.transactionType() == 'D')
+            if(accountDetails.getAccountBalance().compareTo(BigDecimal.valueOf(0)) <= 0 && investmentTransactionsDTO.transactionType() == 'D')
             {
                 return ResponseEntity.badRequest().body("Cannot withdraw from account: ".concat(accountDetails.getAccountNumber()).concat(" with balance of ").concat(String.valueOf(accountDetails.getAccountBalance())));
             }
